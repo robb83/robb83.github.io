@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Automated/Remoted Car</title>
+	<meta name="keywords" content="arduino, android, robot, car, rc, autonomous, robot, avoidance" />
+	<meta name="description" content="Arduino based autonomous robot car, controlled by android phone." />
+	<style type="text/css">
+		img,div,a,body,video { padding: 0px; margin: 0px; }
+		a img { border: none; }		
+		ul { list-style: none;}
+		body {
+			font-family: tahoma;
+			width:100%;
+			height:100%;
+			background-color: #ddd;
+			font-size:16px;
+		}
+		.page {
+			width:1100px;
+			margin-left:auto;
+			margin-right:auto;
+			background-color: #fff;
+			text-align:center;
+		}
+		div.spec {
+			text-align:left;
+			padding:25px;
+			font-size:14px;
+		}
+		div.code {
+			font-size:11px;
+		}
+		div.footer {
+			padding: 0px 25px 0px 25px;	
+			margin-top: 25px;			
+			font-size: 10px;
+			text-align: right;
+			background-color: #2D2F31;
+			color: #fff;
+		}
+		
+		.b { display: none;}
+	</style>
+	
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4/jquery.min.js"></script>
+	<script type="text/javascript" src="fancybox/jquery.fancybox-1.3.4.js"></script>
+	<script type="text/javascript" src="fancybox/jquery.easing-1.3.pack.js"></script>
+	<script type="text/javascript" src="fancybox/jquery.mousewheel-3.0.4.pack.js"></script>
+	<link rel="stylesheet" href="fancybox/jquery.fancybox-1.3.4.css" type="text/css" media="screen" />
+</head>
+<body>
+<div class="page">
+	<div class="header">
+		<img src="header.jpg" alt="" />
+	</div>
+	<div>
+		<h2>Specification:</h2>
+		<div class="spec">
+			<div style="float:left;padding:10px;width:330px;">
+				<h3>Components</h3>
+				<ul>
+					<li>2 battery pack (separated from dc motor - 12 x NiMH)</li>
+					<li>3 IR distance sensor (10-80cm)</li>
+					<li>1 Buzzer</li>
+					<li>2 Voltage Divider</li>
+					<li>1 servo (but offline)</li>		
+					<li>1 bluetooth adapter</li>
+					<li>1 dfrobot baron platform (with encoder)</li>
+					<li>1 dfrobot motor shield</li>
+					<li>1 dfrobot USB host shield (for future use)</li>
+					<li>1 Arduino Mega microcontroller</li>
+				</ul>
+			</div>
+			<div style="float:left;padding:10px;width:330px;">
+				<h3>Control modes</h3>
+				<ul>
+					<li>Manual from android phone over bluetooth</li>
+					<li>From serial port with text command (parallel with phone)</li>
+					<li>Simple avoidance AI</li>
+				</ul>
+			</div>
+			<div style="float:left;padding:10px;width:330px;">
+				<h3>AI algorithm</h3>
+				<div class="code"><xmp>
+{
+  start();
+  while(true)
+  {
+    while(freeway())
+    {
+      goforward();
+    }
+	
+    int way = wayFinder();
+    if (way == DIRECTION_LEFT)
+    {
+      turnLeft();
+    } else if (way == DIRECTION_RIGHT)
+    {
+      turnRight();
+    }
+	
+    delay(50);
+  }
+}				
+				</xmp></div>
+			</div>
+			<div style="clear:both;"></div>
+		</div>
+		<h2>Source code:</h2>
+		<div>
+			<a href="https://github.com/robb83/Projects/tree/master/Devices/RemotedCar">GitHub</a>
+		</div>
+	</div>
+	<div class="media">
+		<h2>Images, videos:</h2>
+		<a rel="gallery" href="DSC00838_mid.JPG" target="_blank"><img src="DSC00838_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00839_mid.JPG" target="_blank"><img src="DSC00839_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00840_mid.JPG" target="_blank"><img src="DSC00840_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00841_mid.JPG" target="_blank"><img src="DSC00841_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00843_mid.JPG" target="_blank"><img src="DSC00843_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00844_mid.JPG" target="_blank"><img src="DSC00844_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00845_mid.JPG" target="_blank"><img src="DSC00845_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00847_mid.JPG" target="_blank"><img src="DSC00847_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00850_mid.JPG" target="_blank"><img src="DSC00850_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00851_mid.JPG" target="_blank"><img src="DSC00851_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00852_mid.JPG" target="_blank"><img src="DSC00852_small.JPG" alt="" /></a>
+		<a rel="gallery" href="DSC00863_c_mid.JPG" target="_blank"><img src="DSC00863_c_small.JPG" alt="" /></a>
+
+
+		<video poster="MOV00833.jpg" width="320" height="240" controls>
+			<source src="MOV00833.ogg" type='video/ogg;'/>
+			<source src="MOV00833.3gp" type='video/mp4;'/>
+			<a href="MOV00833.ogg"/>Download</a>
+		</video>
+
+		<video poster="MOV00857.jpg" width="320" height="240" controls>
+			<source src="MOV00857.ogg" type='video/ogg;'/>
+			<source src="MOV00857.3gp" type='video/mp4;'/>
+			<a href="MOV00857.ogg"/>Download</a>
+		</video>
+		
+		<video poster="MOV00835.jpg" width="320" height="240" controls>
+			<source src="MOV00835.ogg" type='video/ogg;'/>
+			<source src="MOV00835.3gp" type='video/mp4;'/>
+			<a href="MOV00835.ogg"/>Download</a>
+		</video>
+
+		<video poster="MOV00842.jpg" width="320" height="240" controls>
+			<source src="MOV00842.ogg" type='video/ogg;'/>
+			<source src="MOV00842.3gp" type='video/mp4;'/>
+			<a href="MOV00842.ogg"/>Download</a>
+		</video>
+	</div>
+	<div class="footer">
+		Contact: robb83 <div class="b">apple</div> gmail <div class="b">banana</div>
+	</div>
+</div>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			$(".media a").fancybox({
+				'transitionIn'	:	'elastic',
+				'transitionOut'	:	'elastic',
+				'speedIn'		:	600, 
+				'speedOut'		:	200, 
+				'overlayShow'	:	false
+			});
+		});	
+	</script>
+	<script type="text/javascript">
+
+	  var _gaq = _gaq || [];
+	  _gaq.push(['_setAccount', 'UA-33891633-1']);
+	  _gaq.push(['_trackPageview']);
+
+	  (function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	  })();
+
+	</script>	
+</body>
+</html>
