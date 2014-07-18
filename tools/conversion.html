@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="conversionApp">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.15/angular.min.js"></script>
+	</head>
+	<body>
+		<div ng-controller="conversionController">
+		  <form>
+			<input type="number" ng-model="number" ng-change="do()" />
+			<select ng-model="type" 
+				ng-options="(metric.name + ' (' + metric.symbol + ')') for metric in metrics" 
+				ng-change="do()">
+			</select>
+		  </form>
+		  <p ng-repeat="m in metrics">
+			  {{m.name}}: {{convert(m)}} {{m.symbol}}
+		  </p>
+		</div>
+    
+		<script>
+			angular.module('conversionApp', [])
+			  .controller('conversionController', ['$scope', function($scope) {
+				
+				$scope.number = 0;
+				$scope.result = 0;
+				$scope.metrics = [
+					{ power: 15, name: 'peta', symbol: 'P'},
+					{ power: 12, name: 'tera', symbol: 'T'},
+					{ power: 9, name: 'giga', symbol: 'G'},
+					{ power: 6, name: 'mega', symbol: 'M'},
+					{ power: 3, name: 'kilo', symbol: 'k'},
+					{ power: 2, name: 'hecto', symbol: 'h'},
+					{ power: 1, name: 'deca', symbol: 'da'},
+					{ power: 0, name: 'base', symbol: ''},
+					{ power: -1, name: 'deci', symbol: 'd'},
+					{ power: -2, name: 'centi', symbol: 'c'},
+					{ power: -3, name: 'milli', symbol: 'm'},
+					{ power: -6, name: 'micro', symbol: 'µ'},
+					{ power: -9, name: 'nano', symbol: 'n'},
+					{ power: -12, name: 'paco', symbol: 'p'},
+				];
+				$scope.type = $scope.metrics[7];
+				
+				$scope.convert = function(m) {
+					return $scope.result / Math.pow(10, m.power);
+				};
+				
+				$scope.do = function() {
+				  $scope.result = parseFloat($scope.number) * Math.pow(10, $scope.type.power)
+				};
+			  }]);
+		</script>
+	</body>
+</html>

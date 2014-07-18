@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="powerCostApp">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-beta.15/angular.min.js"></script>
+	</head>
+	<body>
+		<div ng-controller="calculatorController">
+		  <form ng-submit="do()">
+			  
+			<input type="number" ng-model="power" ngChange="calc()" />&nbsp;W<br/>
+			<input type="number" ng-model="usage" ngChange="calc()" />&nbsp;Napi használat, órában<br/>
+			<input type="number" ng-model="cost" ngChange="calc()" />&nbsp;Költség (/kWh)<br/>
+		
+			<input class="btn-primary" type="submit" value="Számol" />
+		  </form>
+		  <p>Napi költség: {{resultDay | number : 3}}</p>
+		  <p>Heti költség: {{resultWeek | number : 3}}</p>
+		  <p>Havi költség: {{resultMonth | number : 3}}</p>
+		  <p>Éves költség: {{resultYear | number : 3}}</p>
+		</div>
+    
+		<script>
+			angular.module('powerCostApp', [])
+			  .controller('calculatorController', ['$scope', function($scope) {
+				
+				$scope.cost = 1,
+				$scope.power = 0,
+				$scope.usage = 0,
+				$scope.resultDay = 0,
+				$scope.resultWeek = 0,
+				$scope.resultMonth = 0,
+				$scope.resultYear = 0;
+      
+				$scope.do = function() {
+					var p = parseFloat($scope.power),
+						c = parseFloat($scope.cost),
+						h = parseFloat($scope.usage);
+						
+				  $scope.resultDay = (( p / 1000.0) * h) * c;
+				  $scope.resultWeek = $scope.resultDay * 7;
+				  $scope.resultMonth = $scope.resultWeek * 4;
+				  $scope.resultYear = $scope.resultDay * 365;
+				};
+			  }]);
+		</script>
+	</body>
+</html>
