@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XLSX → XML konvertáló</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2330; --muted:#667085; --accent:#2563eb; --border:#cbd2dc; --ok:#15803d; --err:#b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1d222a; --text:#e8ebf0; --muted:#98a2b3; --accent:#5b93ff; --border:#3a424f; --ok:#4ade80; --err:#f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:32px 16px; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; background:var(--card); border-radius:12px; padding:28px; box-shadow:0 1px 4px rgba(0,0,0,.12); }
+  h1 { margin:0 0 4px; font-size:1.4rem; }
+  p.sub { margin:0 0 20px; color:var(--muted); }
+  #drop { border:2px dashed var(--border); border-radius:10px; padding:36px 16px; text-align:center; cursor:pointer; transition:.15s; }
+  #drop.over, #drop:hover { border-color:var(--accent); background:rgba(37,99,235,.06); }
+  #drop strong { color:var(--accent); }
+  #status { margin:16px 0 0; min-height:1.5em; white-space:pre-wrap; }
+  #status.ok { color:var(--ok); }
+  #status.err { color:var(--err); }
+  button { margin-top:12px; padding:10px 18px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  button[hidden] { display:none; }
+  pre { margin:16px 0 0; padding:12px; max-height:260px; overflow:auto; background:var(--bg); border-radius:8px; font-size:.8rem; }
+  pre[hidden] { display:none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>XLSX → XML konvertáló</h1>
+  <p class="sub">Húzd ide az Excel fájlt, vagy kattints a kiválasztáshoz. A konvertálás a böngésződben fut, a fájl nem kerül feltöltésre sehova.</p>
+
+  <div id="drop"><strong>Válassz fájlt</strong> vagy húzd ide (.xlsx)</div>
+  <input type="file" id="file" accept=".xlsx,.xlsm" hidden>
+
+  <p id="status"></p>
+  <button id="again" hidden>XML letöltése újra</button>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  const COLUMNS = [
+    'Sorszam', 'AzonositoOrszagkodja', 'Azonosito', 'KiadasiSorszam', 'TenyeszetKodIndito',
+    'KikerulesDatuma', 'TenyeszetKodFogado', 'ErkezesDatuma', 'MarhalevelTipusa',
+  ];
+  const DATE_COLUMNS = new Set(['KikerulesDatuma', 'ErkezesDatuma']);
+  const MAX_LISTED_ERRORS = 15;
+
+  const drop = document.getElementById('drop');
+  const fileInput = document.getElementById('file');
+  const statusEl = document.getElementById('status');
+  const againBtn = document.getElementById('again');
+
+  let lastXml = '';
+  let lastName = 'output.xml';
+
+  const setStatus = (msg, cls = '') => { statusEl.textContent = msg; statusEl.className = cls; };
+  const pad = (n) => String(n).padStart(2, '0');
+  const escapeXml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Plain text value of a cell; mirrors Python's `str(value or "")` (0 / false -> empty)
+  function cellText(cell) {
+    if (!cell || cell.v === undefined || cell.v === null || !cell.v) return '';
+    return String(cell.v).trim();
+  }
+
+  function isValidYmd(y, m, d) {
+    if (y < 1900 || y > 2100 || m < 1 || m > 12 || d < 1) return false;
+    return d <= new Date(Date.UTC(y, m, 0)).getUTCDate(); // days in month
+  }
+
+  // Excel serial number -> "YYYY-MM-DD" (or null)
+  function serialToYmd(serial) {
+    const c = XLSX.SSF.parse_date_code(serial);
+    if (!c || !isValidYmd(c.y, c.m, c.d)) return null;
+    return `${c.y}-${pad(c.m)}-${pad(c.d)}`;
+  }
+
+  // Date cell -> { value, ok }. Accepts serial numbers (shown as plain integers when the
+  // cell is not formatted as a date) and text such as "2026.11.08.", "2026-11-08", "2026. 11. 08 00:00:00".
+  function parseDateCell(cell) {
+    if (!cell || cell.v === undefined || cell.v === null || cell.v === '') return { value: '', ok: true };
+
+    if (typeof cell.v === 'number') {
+      const ymd = serialToYmd(cell.v);
+      return ymd ? { value: ymd, ok: true } : { value: '', ok: false };
+    }
+    if (cell.t === 'b') return { value: '', ok: false };
+
+    const s = String(cell.v).trim();
+    if (s === '') return { value: '', ok: true };
+
+    // Text containing only a serial number (e.g. "46334")
+    if (/^\d{5}$/.test(s)) {
+      const ymd = serialToYmd(Number(s));
+      return ymd ? { value: ymd, ok: true } : { value: '', ok: false };
+    }
+
+    const m = s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})\s*\.?(?:[\sT]+\d{1,2}:\d{2}(?::\d{2})?)?$/);
+    if (!m) return { value: '', ok: false };
+    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    if (!isValidYmd(y, mo, d)) return { value: '', ok: false };
+    return { value: `${y}-${pad(mo)}-${pad(d)}`, ok: true };
+  }
+
+  // Locate required columns by header name in row 1 (trimmed, case-insensitive)
+  function findColumns(ws) {
+    if (!ws || !ws['!ref']) throw new Error('A munkalap üres.');
+    const range = XLSX.utils.decode_range(ws['!ref']);
+
+    const headers = new Map();
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const name = cellText(ws[XLSX.utils.encode_cell({ r: range.s.r, c })]).toLowerCase();
+      if (name && !headers.has(name)) headers.set(name, c);
+    }
+
+    const missing = COLUMNS.filter((n) => !headers.has(n.toLowerCase()));
+    if (missing.length) {
+      throw new Error('Hiányzó oszlop(ok) a fejlécben (1. sor):\n- ' + missing.join('\n- '));
+    }
+
+    const cols = {};
+    COLUMNS.forEach((n) => { cols[n] = headers.get(n.toLowerCase()); });
+    return { cols, range };
+  }
+
+  function convert(workbook) {
+    const ws = workbook.Sheets[workbook.SheetNames[0]];
+    const { cols, range } = findColumns(ws);
+    const cellAt = (r, name) => ws[XLSX.utils.encode_cell({ r, c: cols[name] })];
+
+    const xml = [
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+      '<ns1:SzmarhaBejelentok xmlns:ns1="http://e5147.client.enar.si.hu" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">',
+    ];
+    const errors = [];
+    let count = 0;
+
+    // Data starts below the header row and ends at the first empty "Sorszam" cell
+    for (let r = range.s.r + 1; r <= range.e.r && cellText(cellAt(r, 'Sorszam')) !== ''; r++) {
+      xml.push('\t<SzmarhaBejelento>');
+
+      for (const name of COLUMNS) {
+        const cell = cellAt(r, name);
+        let value;
+
+        if (DATE_COLUMNS.has(name)) {
+          const res = parseDateCell(cell);
+          if (!res.ok) {
+            errors.push(`${r + 1}. sor, ${name}: érvénytelen dátum (${cell.w ?? cell.v})`);
+          }
+          value = res.value;
+        } else {
+          value = cellText(cell);
+          if (name === 'AzonositoOrszagkodja' && !value) value = 'HU';
+          if (name === 'Azonosito') value = value.replace(/ /g, '');
+        }
+
+        xml.push(`\t\t<${name}>${escapeXml(value)}</${name}>`);
+      }
+
+      xml.push('\t</SzmarhaBejelento>');
+      count++;
+    }
+
+    xml.push('</ns1:SzmarhaBejelentok>');
+
+    if (errors.length) {
+      const listed = errors.slice(0, MAX_LISTED_ERRORS).join('\n');
+      const more = errors.length > MAX_LISTED_ERRORS ? `\n… és még ${errors.length - MAX_LISTED_ERRORS} hiba` : '';
+      throw new Error(`${errors.length} dátum hiba (elvárt formátum: ÉÉÉÉ-HH-NN):\n${listed}${more}`);
+    }
+
+    return { text: xml.map((l) => l + '\n').join(''), count };
+  }
+
+  function download(text, name) {
+    const blob = new Blob([text], { type: 'application/xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function handleFile(file) {
+    if (!file) return;
+    setStatus('Feldolgozás…');
+    againBtn.hidden = true;
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const { text, count } = convert(wb);
+
+      lastXml = text;
+      lastName = file.name.replace(/\.[^.]+$/, '') + '.xml';
+
+      download(lastXml, lastName);
+      setStatus(`Kész: ${count} rekord → ${lastName}`, 'ok');
+      againBtn.hidden = false;
+      const lines = text.split('\n');
+    } catch (err) {
+      console.error(err);
+      setStatus('Hiba: ' + err.message, 'err');
+    }
+  }
+
+  drop.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { handleFile(fileInput.files[0]); fileInput.value = ''; });
+  againBtn.addEventListener('click', () => download(lastXml, lastName));
+
+  ['dragenter', 'dragover'].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
+</script>
+</body>
+</html>
